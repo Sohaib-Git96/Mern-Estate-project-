@@ -1,16 +1,20 @@
 import {BrowserRouter,Routes,Route} from "react-router-dom";
 import Home from "./pages/Home";
 import About from "./pages/About";
-import signin from "./pages/signin"
-import signOut from "./pages/signOut";
+import Signin from "./pages/Signin"
+import SignOut from "./pages/SignOut";
+import Profile from "./pages/Profile";
+import Header from "./components/Header";
+
 function App() {
   return (
     <BrowserRouter>
+    <Header/>
     <Routes>
-      <Route path="/" element={<Home />}/>
+      <Route path="/home" element={<Home />}/>
       <Route path="/about" element={<About/>}/>
-      <Route path="/signin" element={<signin/>}/>
-      <Route path="/signOut" element={<signOut/>}/>
+      <Route path="/sign-in" element={<Signin/>}/>
+      <Route path="/signOut" element={<SignOut/>}/>
       <Route path="/profile" element={<profile/>}/>      
        </Routes>
       </BrowserRouter>
