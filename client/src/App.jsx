@@ -1,7 +1,19 @@
-import react from 'react'
+import {BrowserRouter,Routes,Route} from "react-router-dom";
+import Home from "./pages/Home";
+import About from "./pages/About";
+import signin from "./pages/signin"
+import signOut from "./pages/signOut";
 function App() {
   return (
-    <h1 className="text-3xl font-bold text-blue-1000">Hello Tailwind</h1>
+    <BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Home />}/>
+      <Route path="/about" element={<About/>}/>
+      <Route path="/signin" element={<signin/>}/>
+      <Route path="/signOut" element={<signOut/>}/>
+      <Route path="/profile" element={<profile/>}/>      
+       </Routes>
+      </BrowserRouter>
   )
 }
 
