@@ -10,6 +10,7 @@ export const signup= async(req,res,next)=>{
         await newUser.save();
         res.status(201).json({"message":"User Created Successfully"})
     } catch(error){
+        console.log(error)
         next(error)
     }
 }
@@ -17,10 +18,12 @@ export const signup= async(req,res,next)=>{
 export const signin=async(req,res,next)=>{
     const {email,password}=req.body;
     try{
+        console.log(req.body)
         const validUser=await User.findOne({email})
         if(!validUser){ return next(errorhandler(404,"user not found"))}
         const validPassword=bcrypt.compareSync(password,validUser.password);
         if(!validPassword){return next(errorhandler(404,"Invalid Password"))}
+        console.log(validUser.password) 
         const token=jwt.sign({id:validUser._id},process.env.JWT_SECRET)
         const {password:pass ,...rest}=validUser._doc;
         res.cookie("Access_Token",token,{httpOnly:true}).status(200).json(rest)
