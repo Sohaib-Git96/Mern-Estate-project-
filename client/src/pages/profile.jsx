@@ -1,31 +1,133 @@
-import React from 'react'
-import { useSelector } from 'react-redux';
+import React, { useRef, useState } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
+import { updateUserSuccess } from '../redux/user/userSlice'
 
+const CLOUD_NAME = 'atsl2gty'
+const UPLOAD_PRESET = 'mern-estate'
 
-export default function profile() {
-  const {currentUser}=useSelector((state)=>state.user)
+export default function Profile() {
+  const fileRef = useRef(null)
+  const dispatch = useDispatch()
+  const { currentUser } = useSelector((state) => state.user)
+
+  const [uploading, setUploading] = useState(false)
+  const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: '...' }
+  const [formData, setFormData] = useState({})
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Size check (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image upload failed: image must be less than 2MB' })
+      return
+    }
+
+    setUploading(true)
+    setMessage(null)
+
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      data.append('upload_preset', UPLOAD_PRESET)
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: data }
+      )
+      const result = await res.json()
+
+      if (result.secure_url) {
+        setFormData({ ...formData, avator: result.secure_url })
+        setMessage({ type: 'success', text: 'Image uploaded successfully. Click update to save it.' })
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Image upload failed: ' + (result.error?.message || 'unknown error'),
+        })
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Image upload failed. Please check your internet and try again.' })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!formData.avator) {
+      setMessage({ type: 'error', text: 'Please select an image first' })
+      return
+    }
+
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/user/update/${currentUser._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+
+      if (data.success === false) {
+        setMessage({ type: 'error', text: 'Update failed: ' + data.message })
+        return
+      }
+
+      dispatch(updateUserSuccess(data))
+      setMessage({ type: 'success', text: 'Successfully updated!' })
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Update failed: ' + err.message })
+    }
+  }
+
   return (
     <div className='p-3 max-w-lg mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>Profile</h1>
-      <form className='flex flex-col'>
-       <img
-       src={currentUser.avator}
-       alt="profile"
-      referrerPolicy="no-referrer"
-      className="rounded-full h-24 w-24 object-cover cursor-pointer self-center mt-2"
-      />
-      <input type='text' placeholder='username' className='border p-3 rounded-lg mt-4'/>
-      <input type='text' placeholder=' email' className='border p-3 rounded-lg mt-4'/>
-      <input type='text' placeholder='password' className='border p-3 rounded-lg mt-4'/>
-      <button className="bg-slate-700 text-white rounded-lg uppercase p-3 hover:opacity-95 disabled:opacity-80 mt-4">update</button>     
+      <form onSubmit={handleSubmit} className='flex flex-col'>
+        <input
+          type='file'
+          ref={fileRef}
+          hidden
+          accept='image/*'
+          onChange={handleFileChange}
+        />
+        <img
+          onClick={() => fileRef.current.click()}
+          src={formData.avator || currentUser.avator}
+          alt='profile'
+          referrerPolicy='no-referrer'
+          className='rounded-full h-24 w-24 object-cover cursor-pointer self-center mt-2'
+        />
+
+        <p className='text-sm self-center mt-2 text-center'>
+          {uploading && <span className='text-slate-700'>Uploading...</span>}
+          {message && (
+            <span className={message.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+              {message.text}
+            </span>
+          )}
+        </p>
+
+        <input type='text' placeholder='username' className='border p-3 rounded-lg mt-4' />
+        <input type='text' placeholder='email' className='border p-3 rounded-lg mt-4' />
+        <input type='password' placeholder='password' className='border p-3 rounded-lg mt-4' />
+        <button
+          type='submit'
+          disabled={uploading}
+          className='bg-slate-700 text-white rounded-lg uppercase p-3 hover:opacity-95 disabled:opacity-80 mt-4'
+        >
+          update
+        </button>
       </form>
+
       <div className='flex justify-between mt-4'>
         <span className='text-red-700 cursor-pointer'>Delete Account</span>
         <span className='text-red-700 cursor-pointer'>Sign out</span>
-
-
       </div>
     </div>
-
   )
 }
