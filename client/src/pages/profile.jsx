@@ -6,7 +6,10 @@ import {
   updateUserFailure,
   deleteUserStart,
   deleteUserSuccess,
-  deleteUserFailure
+  deleteUserFailure,
+  signOutUserStart,
+  signOutUserSuccess,
+  signOutUserFailure,
 } from '../redux/user/userSlice'
 
 const CLOUD_NAME = 'atsl2gty'
@@ -15,12 +18,12 @@ const UPLOAD_PRESET = 'mern-estate'
 export default function Profile() {
   const fileRef = useRef(null)
   const dispatch = useDispatch()
-  const { currentUser, loading,error } = useSelector((state) => state.user)
+  const { currentUser, loading, error } = useSelector((state) => state.user)
 
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: '...' }
   const [formData, setFormData] = useState({})
-  const [updateSuccess,setUpdateSuccess]=useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false)
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0]
@@ -68,15 +71,19 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Update clicked, formData:', { ...formData, password: formData.password ? '***' : undefined })
-    console.log('currentUser:', currentUser)
 
     if (Object.keys(formData).length === 0) {
       setMessage({ type: 'error', text: 'Nothing to update. Change a field or select an image first' })
       return
     }
 
+    if (!currentUser?._id) {
+      setMessage({ type: 'error', text: 'Please sign in again.' })
+      return
+    }
+
     setMessage(null)
+    setUpdateSuccess(false)
 
     try {
       dispatch(updateUserStart())
@@ -87,7 +94,6 @@ export default function Profile() {
         body: JSON.stringify(formData),
       })
       const data = await res.json()
-      console.log('Server response:', data)
 
       if (data.success === false) {
         dispatch(updateUserFailure(data.message))
@@ -98,29 +104,41 @@ export default function Profile() {
       dispatch(updateUserSuccess(data))
       setFormData({})
       setUpdateSuccess(true)
-      setMessage({ type: 'success', text: 'Successfully updated!' })
     } catch (err) {
       dispatch(updateUserFailure(err.message))
       setMessage({ type: 'error', text: 'Update failed: ' + err.message })
     }
   }
 
-  const handleDeleteUser=async()=>{
-    try{
+  const handleDeleteUser = async () => {
+    try {
       dispatch(deleteUserStart())
-      const res=await fetch(`/api/user/delete/${currentUser._id}`,{
-        
-      method:"DELETE",
+      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+        method: 'DELETE',
       })
-      const data=await res.json();
-      if(data.success===false){
+      const data = await res.json()
+      if (data.success === false) {
         dispatch(deleteUserFailure(data.message))
-        return;
+        return
       }
-      dispatch(deleteUserSuccess(data));
+      dispatch(deleteUserSuccess())
+    } catch (err) {
+      dispatch(deleteUserFailure(err.message))
+    }
+  }
 
-    } catch(error){
-      dispatch(deleteUserFailure(error.message))
+  const handleSignOut = async () => {
+    try {
+      dispatch(signOutUserStart())
+      const res = await fetch('/api/auth/signout')
+      const data = await res.json()
+      if (data.success === false) {
+        dispatch(signOutUserFailure(data.message))
+        return
+      }
+      dispatch(signOutUserSuccess())
+    } catch (err) {
+      dispatch(signOutUserFailure(err.message))
     }
   }
 
@@ -137,7 +155,7 @@ export default function Profile() {
         />
         <img
           onClick={() => fileRef.current.click()}
-          src={formData.avator || currentUser.avator}
+          src={formData.avator || currentUser?.avator}
           alt='profile'
           referrerPolicy='no-referrer'
           className='rounded-full h-24 w-24 object-cover cursor-pointer self-center mt-2'
@@ -156,7 +174,7 @@ export default function Profile() {
           type='text'
           id='username'
           placeholder='username'
-          defaultValue={currentUser.username}
+          defaultValue={currentUser?.username}
           onChange={handleChange}
           className='border p-3 rounded-lg mt-4'
         />
@@ -164,7 +182,7 @@ export default function Profile() {
           type='email'
           id='email'
           placeholder='email'
-          defaultValue={currentUser.email}
+          defaultValue={currentUser?.email}
           onChange={handleChange}
           className='border p-3 rounded-lg mt-4'
         />
@@ -185,11 +203,16 @@ export default function Profile() {
       </form>
 
       <div className='flex justify-between mt-4'>
-        <span onClick={handleDeleteUser} className='text-red-700 cursor-pointer'>Delete Account</span>
-        <span className='text-red-700 cursor-pointer'>Sign out</span>
+        <span onClick={handleDeleteUser} className='text-red-700 cursor-pointer'>
+          Delete Account
+        </span>
+        <span onClick={handleSignOut} className='text-red-700 cursor-pointer'>
+          Sign out
+        </span>
       </div>
-      <p className='text-red-700 mt-5'>{error ? error:" "}</p>
-      <p className='text-green-700 mt-5'> {updateSuccess?"User is updated successfully":""}</p>
+
+      <p className='text-red-700 mt-5'>{error ? error : ''}</p>
+      <p className='text-green-700 mt-5'>{updateSuccess ? 'User is updated successfully!' : ''}</p>
     </div>
   )
 }
