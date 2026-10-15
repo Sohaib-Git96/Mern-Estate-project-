@@ -19,7 +19,7 @@ export const updateUser = async (req, res, next) => {
           avator: req.body.avator
         },
       },
-      { new: true }
+      {returnDocument : "after" }
     )
 
     const { password, ...rest } = updatedUser._doc

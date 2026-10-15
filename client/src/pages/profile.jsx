@@ -1,6 +1,10 @@
 import React, { useRef, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { updateUserSuccess } from '../redux/user/userSlice'
+import {
+  updateUserStart,
+  updateUserSuccess,
+  updateUserFailure,
+} from '../redux/user/userSlice'
 
 const CLOUD_NAME = 'atsl2gty'
 const UPLOAD_PRESET = 'mern-estate'
@@ -8,11 +12,12 @@ const UPLOAD_PRESET = 'mern-estate'
 export default function Profile() {
   const fileRef = useRef(null)
   const dispatch = useDispatch()
-  const { currentUser } = useSelector((state) => state.user)
+  const { currentUser, loading,error } = useSelector((state) => state.user)
 
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: '...' }
   const [formData, setFormData] = useState({})
+  const [updateSuccess,setUpdateSuccess]=useState(false);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0]
@@ -39,7 +44,7 @@ export default function Profile() {
       const result = await res.json()
 
       if (result.secure_url) {
-        setFormData({ ...formData, avator: result.secure_url })
+        setFormData((prev) => ({ ...prev, avator: result.secure_url }))
         setMessage({ type: 'success', text: 'Image uploaded successfully. Click update to save it.' })
       } else {
         setMessage({
@@ -54,32 +59,45 @@ export default function Profile() {
     }
   }
 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('Update clicked, formData:', { ...formData, password: formData.password ? '***' : undefined })
+    console.log('currentUser:', currentUser)
 
-    if (!formData.avator) {
-      setMessage({ type: 'error', text: 'Please select an image first' })
+    if (Object.keys(formData).length === 0) {
+      setMessage({ type: 'error', text: 'Nothing to update. Change a field or select an image first' })
       return
     }
 
     setMessage(null)
 
     try {
+      dispatch(updateUserStart())
+
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
       const data = await res.json()
+      console.log('Server response:', data)
 
       if (data.success === false) {
+        dispatch(updateUserFailure(data.message))
         setMessage({ type: 'error', text: 'Update failed: ' + data.message })
         return
       }
 
       dispatch(updateUserSuccess(data))
+      setFormData({})
+      setUpdateSuccess(true)
       setMessage({ type: 'success', text: 'Successfully updated!' })
     } catch (err) {
+      dispatch(updateUserFailure(err.message))
       setMessage({ type: 'error', text: 'Update failed: ' + err.message })
     }
   }
@@ -112,15 +130,35 @@ export default function Profile() {
           )}
         </p>
 
-        <input type='text' placeholder='username' className='border p-3 rounded-lg mt-4' />
-        <input type='text' placeholder='email' className='border p-3 rounded-lg mt-4' />
-        <input type='password' placeholder='password' className='border p-3 rounded-lg mt-4' />
+        <input
+          type='text'
+          id='username'
+          placeholder='username'
+          defaultValue={currentUser.username}
+          onChange={handleChange}
+          className='border p-3 rounded-lg mt-4'
+        />
+        <input
+          type='email'
+          id='email'
+          placeholder='email'
+          defaultValue={currentUser.email}
+          onChange={handleChange}
+          className='border p-3 rounded-lg mt-4'
+        />
+        <input
+          type='password'
+          id='password'
+          placeholder='password'
+          onChange={handleChange}
+          className='border p-3 rounded-lg mt-4'
+        />
         <button
           type='submit'
-          disabled={uploading}
+          disabled={uploading || loading}
           className='bg-slate-700 text-white rounded-lg uppercase p-3 hover:opacity-95 disabled:opacity-80 mt-4'
         >
-          update
+          {loading ? 'Updating...' : 'update'}
         </button>
       </form>
 
@@ -128,6 +166,8 @@ export default function Profile() {
         <span className='text-red-700 cursor-pointer'>Delete Account</span>
         <span className='text-red-700 cursor-pointer'>Sign out</span>
       </div>
+      <p className='text-red-700 mt-5'>{error ? error:" "}</p>
+      <p className='text-green-700 mt-5'> {updateSuccess?"User is updated successfully":""}</p>
     </div>
   )
 }
