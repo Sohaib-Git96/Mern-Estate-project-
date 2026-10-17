@@ -10,7 +10,8 @@ import {
   signOutUserStart,
   signOutUserSuccess,
   signOutUserFailure,
-} from '../redux/user/userSlice'
+} from '../redux/user/userSlice';
+import { Link } from "react-router-dom";
 
 const CLOUD_NAME = 'atsl2gty'
 const UPLOAD_PRESET = 'mern-estate'
@@ -201,6 +202,11 @@ export default function Profile() {
           {loading ? 'Updating...' : 'update'}
         </button>
       </form>
+      <Link to={"/create-listing"}>
+      <button  className=" w-full bg-green-700 text-white  uppercase mt-4 rounded-lg text-center p-3 hover:opacity-95">
+        Create listing
+      </button>            
+      </Link>
 
       <div className='flex justify-between mt-4'>
         <span onClick={handleDeleteUser} className='text-red-700 cursor-pointer'>
