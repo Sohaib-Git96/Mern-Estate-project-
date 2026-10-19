@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import {useSelector} from "react-redux";
+import {useNavigate} from "react-router-dom";
 
 export default function CreateListing() {
+  const navigate=useNavigate()
+  const {currentUser}=useSelector(state=>state.user)
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(false);
@@ -13,13 +17,14 @@ export default function CreateListing() {
     bedrooms: 1,
     bathrooms: 1,
     regularPrice: 50,
-    discountPrice: 0,
+    discountPrice:0,
     offer: false,
     parking: false,
     furnished: false,
   });
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  console.log(formData)
 
   // ---------- Cloudinary upload ----------
   const storeImage = async (file) => {
@@ -107,7 +112,7 @@ export default function CreateListing() {
       if (formData.imageUrls.length < 1) {
         return setError('You must upload at least one image');
       }
-      if (formData.offer && formData.regularPrice < formData.discountPrice) {
+      if (formData.offer && formData.regularPrice <= formData.discountPrice) {
         return setError('Discount price must be lower than regular price');
       }
 
@@ -116,11 +121,14 @@ export default function CreateListing() {
 
       // TODO: apni backend API ka URL yahan lagao
       const res = await fetch('/api/listing/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            userRef: currentUser._id,
+          }),
+        });
+       const data = await res.json();
 
       setLoading(false);
       if (data.success === false) {
@@ -128,6 +136,7 @@ export default function CreateListing() {
         return;
       }
       console.log('Listing created:', data);
+      navigate(`/listing/${data._id}`)
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -274,13 +283,13 @@ export default function CreateListing() {
                   id='discountPrice'
                   min={0}
                   max={10000000}
-                  className='border border-gray-300 rounded-lg p-3'
+                  className='border border-gray-300 rounded-lg p-3 w-28 bg-white text-black'
                   required
                   onChange={handleChange}
                   value={formData.discountPrice}
                 />
                 <div className='flex flex-col items-center'>
-                  <p>Discounted Price</p>
+                  <p>Discount Price</p>
                   <span className='text-xs'>($/month)</span>
                 </div>
               </div>
@@ -317,10 +326,6 @@ export default function CreateListing() {
 
           </div>
           <p className='text-red-700 text-sm'>{imageUploadError && imageUploadError}</p>
-
-          <p className='text-red-700 text-sm'>
-            {imageUploadError && imageUploadError}
-          </p>
 
           {formData.imageUrls.map((url, index) => (
             <div

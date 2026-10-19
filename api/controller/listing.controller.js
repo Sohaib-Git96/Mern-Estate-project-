@@ -6,5 +6,6 @@ export const createListing=async (req,res, next)=>{
         return res.status(200).json(listing);
     } catch(error){
         next(error);
+        console.log(error)
     }
 }
