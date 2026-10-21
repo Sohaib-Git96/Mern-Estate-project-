@@ -106,42 +106,64 @@ export default function CreateListing() {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (formData.imageUrls.length < 1) {
-        return setError('You must upload at least one image');
-      }
-      if (formData.offer && formData.regularPrice <= formData.discountPrice) {
-        return setError('Discount price must be lower than regular price');
-      }
+ 
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-      setLoading(true);
-      setError(false);
+  if (formData.imageUrls.length < 1) {
+    setError('You must upload at least one image');
+    return;
+  }
 
-      // TODO: apni backend API ka URL yahan lagao
-      const res = await fetch('/api/listing/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formData,
-            userRef: currentUser._id,
-          }),
-        });
-       const data = await res.json();
+  if (formData.offer && formData.regularPrice <= formData.discountPrice) {
+    setError('Discount price must be lower than regular price');
+    return;
+  }
 
-      setLoading(false);
-      if (data.success === false) {
-        setError(data.message);
-        return;
-      }
-      console.log('Listing created:', data);
-      navigate(`/listing/${data._id}`)
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
+  if (!currentUser?._id) {
+    setError('Please login first');
+    return;
+  }
+
+  setLoading(true);
+  setError(false);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch('/api/listing/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,
+        userRef: currentUser._id,
+      }),
+      signal: controller.signal,
+    });
+
+    const data = await res.json();
+    console.log('Status:', res.status);
+    console.log('Response:', data);
+
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || `Request failed: ${res.status}`);
     }
-  };
+
+    navigate(`/listing/${data._id}`);
+  } catch (err) {
+    console.error(err);
+    setError(
+      err.name === 'AbortError'
+        ? 'Request timed out. Check backend.'
+        : err.message
+    );
+  } finally {
+    clearTimeout(timeoutId);
+    setLoading(false);
+  }
+};
+
 
   return (
     <main className='p-3 max-w-4xl mx-auto'>
