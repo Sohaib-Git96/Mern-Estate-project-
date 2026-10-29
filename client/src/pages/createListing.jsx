@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import {useSelector} from "react-redux";
-import {useNavigate} from "react-router-dom";
-
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 export default function CreateListing() {
-  const navigate=useNavigate()
-  const {currentUser}=useSelector(state=>state.user)
+  const navigate = useNavigate();
+  const { currentUser } = useSelector((state) => state.user);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(false);
@@ -18,38 +17,36 @@ export default function CreateListing() {
     bedrooms: 1,
     bathrooms: 1,
     regularPrice: 50,
-    discountPrice:0,
+    discountPrice: 0,
     offer: false,
     parking: false,
     furnished: false,
   });
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  console.log(formData)
 
   // ---------- Cloudinary upload ----------
   const storeImage = async (file) => {
-    console.log('CLOUD:', import.meta.env.VITE_CLOUDINARY_CLOUD_NAME, 'PRESET:', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-  const data = new FormData();
-  data.append('file', file);
-  data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+    const data = new FormData();
+    data.append('file', file);
+    data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-  const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-    { method: 'POST', body: data }
-  );
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: 'POST', body: data }
+    );
 
-  const result = await res.json();
+    const result = await res.json();
 
-  if (!res.ok) {
-    console.log('Cloudinary error:', result);
-    throw new Error(result.error?.message || 'Upload failed');
-  }
+    if (!res.ok) {
+      console.log('Cloudinary error:', result);
+      throw new Error(result.error?.message || 'Upload failed');
+    }
 
-  return result.secure_url;
-};
+    return result.secure_url;
+  };
 
-    const handleImageSubmit = () => {
+  const handleImageSubmit = () => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
       setImageUploadError(false);
@@ -89,7 +86,8 @@ export default function CreateListing() {
   const handleChange = (e) => {
     const { id, type, value, checked } = e.target;
 
-    if (id === 'sale' || id === 'rent') {
+    // sale, rent ya both: teeno mein se ek hi select hota hai
+    if (id === 'sale' || id === 'rent' || id === 'both') {
       setFormData({ ...formData, type: id });
       return;
     }
@@ -107,64 +105,60 @@ export default function CreateListing() {
     setFormData({ ...formData, [id]: value });
   };
 
- 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (formData.imageUrls.length < 1) {
-    setError('You must upload at least one image');
-    return;
-  }
-
-  if (formData.offer && formData.regularPrice <= formData.discountPrice) {
-    setError('Discount price must be lower than regular price');
-    return;
-  }
-
-  if (!currentUser?._id) {
-    setError('Please login first');
-    return;
-  }
-
-  setLoading(true);
-  setError(false);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const res = await fetch('/api/listing/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...formData,
-        userRef: currentUser._id,
-      }),
-      signal: controller.signal,
-    });
-
-    const data = await res.json();
-    console.log('Status:', res.status);
-    console.log('Response:', data);
-
-    if (!res.ok || data.success === false) {
-      throw new Error(data.message || `Request failed: ${res.status}`);
+    if (formData.imageUrls.length < 1) {
+      setError('You must upload at least one image');
+      return;
     }
 
-    navigate(`/listing/${data._id}`);
-  } catch (err) {
-    console.error(err);
-    setError(
-      err.name === 'AbortError'
-        ? 'Request timed out. Check backend.'
-        : err.message
-    );
-  } finally {
-    clearTimeout(timeoutId);
-    setLoading(false);
-  }
-};
+    if (formData.offer && formData.regularPrice <= formData.discountPrice) {
+      setError('Discount price must be lower than regular price');
+      return;
+    }
 
+    if (!currentUser?._id) {
+      setError('Please login first');
+      return;
+    }
+
+    setLoading(true);
+    setError(false);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch('/api/listing/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          userRef: currentUser._id,
+        }),
+        signal: controller.signal,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || `Request failed: ${res.status}`);
+      }
+
+      navigate(`/listing/${data._id}`);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.name === 'AbortError'
+          ? 'Request timed out. Check backend.'
+          : err.message
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
+  };
 
   return (
     <main className='p-3 max-w-4xl mx-auto'>
@@ -212,7 +206,7 @@ const handleSubmit = async (e) => {
                 onChange={handleChange}
                 checked={formData.type === 'sale'}
               />
-              <label htmlFor='sale'>Sell</label>
+              <label htmlFor='sale'>Rent & sale</label>
             </div>
             <div className='flex gap-2'>
               <input
@@ -223,6 +217,16 @@ const handleSubmit = async (e) => {
                 checked={formData.type === 'rent'}
               />
               <label htmlFor='rent'>Rent</label>
+            </div>
+            <div className='flex gap-2'>
+              <input
+                type='checkbox'
+                id='both'
+                className='w-4'
+                onChange={handleChange}
+                checked={formData.type === 'both'}
+              />
+              <label htmlFor='both'>Sale</label>
             </div>
             <div className='flex gap-2'>
               <input
@@ -296,7 +300,9 @@ const handleSubmit = async (e) => {
               />
               <div className='flex flex-col items-center'>
                 <p>Regular Price</p>
-                <span className='text-xs'>($/month)</span>
+                {formData.type !== 'sale' && (
+                  <span className='text-xs'>(Rs / month)</span>
+                )}
               </div>
             </div>
             {formData.offer && (
@@ -313,7 +319,9 @@ const handleSubmit = async (e) => {
                 />
                 <div className='flex flex-col items-center'>
                   <p>Discount Price</p>
-                  <span className='text-xs'>($/month)</span>
+                  {formData.type !== 'sale' && (
+                    <span className='text-xs'>(Rs / month)</span>
+                  )}
                 </div>
               </div>
             )}
@@ -346,9 +354,10 @@ const handleSubmit = async (e) => {
             >
               {uploading ? 'Uploading...' : 'Upload'}
             </button>
-
           </div>
-          <p className='text-red-700 text-sm'>{imageUploadError && imageUploadError}</p>
+          <p className='text-red-700 text-sm'>
+            {imageUploadError && imageUploadError}
+          </p>
 
           {formData.imageUrls.map((url, index) => (
             <div
