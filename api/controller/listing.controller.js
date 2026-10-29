@@ -1,12 +1,17 @@
 import Listing from "../models/listing.model.js";
 import { errorhandler } from "../utils/error.js";
 
-export const createListing=async (req,res, next)=>{
-        const listing=await Listing.create({
-            ...req.body,
-            userRef:req.user.id,
-        })
-}
+export const createListing = async (req, res, next) => {
+  try {
+    const listing = await Listing.create({
+      ...req.body,
+      userRef: req.user.id,
+    });
+    return res.status(201).json(listing);
+  } catch (error) {
+    next(error);
+  }
+};
         
 export const deleteListing = async (req, res, next) => {
     try {

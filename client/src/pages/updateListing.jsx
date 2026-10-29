@@ -389,7 +389,7 @@ const handleSubmit = async (e) => {
             disabled={loading || uploading}
             className='bg-gray-700 text-white p-3 rounded-lg uppercase hover:shadow-lg disabled:opacity-95'
           >
-            {loading ? 'Creating...' : 'Update Listing'}
+            {loading ? 'Updating...' : 'Update Listing'}
           </button>
           {error && <p className='text-red-700 text-sm'>{error}</p>}
         </div>
